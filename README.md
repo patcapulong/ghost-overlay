@@ -22,7 +22,7 @@ Ghost Overlay lets you see exactly where your implementation differs from the de
 git clone https://github.com/patcapulong/ghost-overlay.git
 cd ghost-overlay/app
 
-# Install dependencies
+# Install dependencies (first time only)
 npm install
 
 # Run the app
@@ -30,6 +30,17 @@ npm start
 ```
 
 The app runs in your menu bar (look for the 👻 emoji).
+
+**Quick start after install:**
+```bash
+cd ghost-overlay && ./start.sh
+```
+
+**Pro tip:** Add an alias to your shell profile (`~/.zshrc` or `~/.bashrc`):
+```bash
+alias ghost="cd ~/path/to/ghost-overlay/app && npm start"
+```
+Then just type `ghost` to launch it anytime.
 
 ### 2. Figma Plugin
 
