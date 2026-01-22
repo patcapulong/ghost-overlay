@@ -131,6 +131,50 @@
       cursor: not-allowed;
     }
 
+    .btn-secondary {
+      background: var(--figma-color-bg-secondary);
+      color: var(--figma-color-text);
+      margin-top: 8px;
+    }
+
+    .btn-secondary:hover {
+      background: var(--figma-color-bg-tertiary);
+    }
+
+    /* Install view styles */
+    #install-view {
+      text-align: center;
+      padding: 8px 0;
+    }
+
+    .install-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+
+    .install-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .install-desc {
+      font-size: 12px;
+      color: var(--figma-color-text-secondary);
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+
+    #install-btn {
+      display: block;
+      text-decoration: none;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
     .error {
       padding: 8px 12px;
       background: rgba(239, 68, 68, 0.1);
@@ -158,30 +202,50 @@
     <h1>Ghost Overlay</h1>
   </div>
 
-  <div class="status">
-    <div class="status-dot" id="status-dot"></div>
-    <span class="status-text" id="status-text">Connecting...</span>
-  </div>
-
-  <div id="message-container"></div>
-
-  <div class="selection">
-    <div class="selection-label">Selected</div>
-    <div class="selection-name" id="selection-name">
-      <span class="no-selection">No frame selected</span>
+  <!-- Connected state -->
+  <div id="connected-view">
+    <div class="status">
+      <div class="status-dot" id="status-dot"></div>
+      <span class="status-text" id="status-text">Connecting...</span>
     </div>
-    <div class="selection-dims" id="selection-dims"></div>
+
+    <div id="message-container"></div>
+
+    <div class="selection">
+      <div class="selection-label">Selected</div>
+      <div class="selection-name" id="selection-name">
+        <span class="no-selection">No frame selected</span>
+      </div>
+      <div class="selection-dims" id="selection-dims"></div>
+    </div>
+
+    <button class="btn btn-primary" id="send-btn" disabled>
+      Send to Overlay
+    </button>
   </div>
 
-  <button class="btn btn-primary" id="send-btn" disabled>
-    Send to Overlay
-  </button>
+  <!-- Not connected state - need to install companion app -->
+  <div id="install-view" class="hidden">
+    <div class="install-icon">👻</div>
+    <div class="install-title">Desktop App Required</div>
+    <div class="install-desc">
+      Ghost Overlay needs a companion desktop app to display the overlay on your screen.
+    </div>
+    <a class="btn btn-primary" id="install-btn" href="https://github.com/patcapulong/ghost-overlay" target="_blank">
+      Download from GitHub
+    </a>
+    <button class="btn btn-secondary" id="retry-btn">
+      Retry Connection
+    </button>
+  </div>
 
   <script>
     const PORT = 47777;
     let ws = null;
     let isConnected = false;
     let currentSelection = null;
+    let connectionAttempts = 0;
+    const MAX_SILENT_ATTEMPTS = 2;
 
     const statusDot = document.getElementById('status-dot');
     const statusText = document.getElementById('status-text');
@@ -189,6 +253,19 @@
     const selectionDims = document.getElementById('selection-dims');
     const sendBtn = document.getElementById('send-btn');
     const messageContainer = document.getElementById('message-container');
+    const connectedView = document.getElementById('connected-view');
+    const installView = document.getElementById('install-view');
+    const retryBtn = document.getElementById('retry-btn');
+
+    function showConnectedView() {
+      connectedView.classList.remove('hidden');
+      installView.classList.add('hidden');
+    }
+
+    function showInstallView() {
+      connectedView.classList.add('hidden');
+      installView.classList.remove('hidden');
+    }
 
     // Connect to desktop app
     function connect() {
@@ -197,8 +274,10 @@
 
         ws.onopen = () => {
           isConnected = true;
+          connectionAttempts = 0;
           statusDot.classList.add('connected');
           statusText.textContent = 'Connected to Ghost Overlay';
+          showConnectedView();
           updateButtonState();
         };
 
@@ -207,14 +286,21 @@
           statusDot.classList.remove('connected');
           statusText.textContent = 'Desktop app not running';
           updateButtonState();
-          // Try to reconnect after 3 seconds
-          setTimeout(connect, 3000);
+          
+          connectionAttempts++;
+          if (connectionAttempts >= MAX_SILENT_ATTEMPTS) {
+            // Show install view after a few failed attempts
+            showInstallView();
+          } else {
+            // Try to reconnect after 2 seconds
+            setTimeout(connect, 2000);
+          }
         };
 
         ws.onerror = () => {
           isConnected = false;
           statusDot.classList.remove('connected');
-          statusText.textContent = 'Connection failed - is the app running?';
+          statusText.textContent = 'Connection failed';
           updateButtonState();
         };
 
@@ -226,9 +312,22 @@
         };
       } catch (e) {
         statusText.textContent = 'Failed to connect';
-        setTimeout(connect, 3000);
+        connectionAttempts++;
+        if (connectionAttempts >= MAX_SILENT_ATTEMPTS) {
+          showInstallView();
+        } else {
+          setTimeout(connect, 2000);
+        }
       }
     }
+
+    // Retry button handler
+    retryBtn.addEventListener('click', () => {
+      connectionAttempts = 0;
+      showConnectedView();
+      statusText.textContent = 'Connecting...';
+      connect();
+    });
 
     function updateButtonState() {
       sendBtn.disabled = !isConnected || !currentSelection;
