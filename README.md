@@ -19,7 +19,7 @@ Ghost Overlay lets you see exactly where your implementation differs from the de
 
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/ghost-overlay.git
+git clone https://github.com/patcapulong/ghost-overlay.git
 cd ghost-overlay/app
 
 # Install dependencies
