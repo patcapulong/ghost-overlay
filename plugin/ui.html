@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      padding: 16px;
+      background: var(--figma-color-bg);
+      color: var(--figma-color-text);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .logo {
+      width: 24px;
+      height: 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    h1 {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--figma-color-bg-secondary);
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+
+    .status-dot.connected {
+      background: #22c55e;
+    }
+
+    .status-text {
+      font-size: 11px;
+      color: var(--figma-color-text-secondary);
+    }
+
+    .selection {
+      padding: 12px;
+      background: var(--figma-color-bg-secondary);
+      border-radius: 6px;
+      margin-bottom: 12px;
+    }
+
+    .selection-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--figma-color-text-tertiary);
+      margin-bottom: 4px;
+    }
+
+    .selection-name {
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .selection-dims {
+      font-size: 11px;
+      color: var(--figma-color-text-secondary);
+      margin-top: 2px;
+    }
+
+    .no-selection {
+      color: var(--figma-color-text-tertiary);
+      font-style: italic;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #5a6fd6 0%, #6a4190 100%);
+    }
+
+    .btn-primary:disabled {
+      background: var(--figma-color-bg-disabled);
+      color: var(--figma-color-text-disabled);
+      cursor: not-allowed;
+    }
+
+    .error {
+      padding: 8px 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 6px;
+      color: #ef4444;
+      font-size: 11px;
+      margin-bottom: 12px;
+    }
+
+    .success {
+      padding: 8px 12px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 6px;
+      color: #22c55e;
+      font-size: 11px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">G</div>
+    <h1>Ghost Overlay</h1>
+  </div>
+
+  <div class="status">
+    <div class="status-dot" id="status-dot"></div>
+    <span class="status-text" id="status-text">Connecting...</span>
+  </div>
+
+  <div id="message-container"></div>
+
+  <div class="selection">
+    <div class="selection-label">Selected</div>
+    <div class="selection-name" id="selection-name">
+      <span class="no-selection">No frame selected</span>
+    </div>
+    <div class="selection-dims" id="selection-dims"></div>
+  </div>
+
+  <button class="btn btn-primary" id="send-btn" disabled>
+    Send to Overlay
+  </button>
+
+  <script>
+    const PORT = 47777;
+    let ws = null;
+    let isConnected = false;
+    let currentSelection = null;
+
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const selectionName = document.getElementById('selection-name');
+    const selectionDims = document.getElementById('selection-dims');
+    const sendBtn = document.getElementById('send-btn');
+    const messageContainer = document.getElementById('message-container');
+
+    // Connect to desktop app
+    function connect() {
+      try {
+        ws = new WebSocket(`ws://localhost:${PORT}`);
+
+        ws.onopen = () => {
+          isConnected = true;
+          statusDot.classList.add('connected');
+          statusText.textContent = 'Connected to Ghost Overlay';
+          updateButtonState();
+        };
+
+        ws.onclose = () => {
+          isConnected = false;
+          statusDot.classList.remove('connected');
+          statusText.textContent = 'Desktop app not running';
+          updateButtonState();
+          // Try to reconnect after 3 seconds
+          setTimeout(connect, 3000);
+        };
+
+        ws.onerror = () => {
+          isConnected = false;
+          statusDot.classList.remove('connected');
+          statusText.textContent = 'Connection failed - is the app running?';
+          updateButtonState();
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === 'connected') {
+            showMessage('Connected!', 'success');
+          }
+        };
+      } catch (e) {
+        statusText.textContent = 'Failed to connect';
+        setTimeout(connect, 3000);
+      }
+    }
+
+    function updateButtonState() {
+      sendBtn.disabled = !isConnected || !currentSelection;
+    }
+
+    function showMessage(text, type = 'error') {
+      messageContainer.innerHTML = `<div class="${type}">${text}</div>`;
+      setTimeout(() => {
+        messageContainer.innerHTML = '';
+      }, 3000);
+    }
+
+    // Handle messages from plugin code
+    window.onmessage = (event) => {
+      const msg = event.data.pluginMessage;
+      if (!msg) return;
+
+      switch (msg.type) {
+        case 'selection-changed':
+          if (msg.name) {
+            currentSelection = msg;
+            selectionName.innerHTML = msg.name;
+            selectionDims.textContent = `${msg.width} × ${msg.height}`;
+          } else {
+            currentSelection = null;
+            selectionName.innerHTML = '<span class="no-selection">No frame selected</span>';
+            selectionDims.textContent = '';
+          }
+          updateButtonState();
+          break;
+
+        case 'image-data':
+          if (ws && isConnected) {
+            ws.send(JSON.stringify({
+              type: 'image',
+              data: msg.data,
+              width: msg.width,
+              height: msg.height,
+              name: msg.name,
+            }));
+            showMessage('Sent to overlay!', 'success');
+          } else {
+            showMessage('Not connected to desktop app');
+          }
+          break;
+
+        case 'error':
+          showMessage(msg.message);
+          break;
+
+        case 'status':
+          statusText.textContent = msg.message;
+          break;
+      }
+    };
+
+    // Send button click
+    sendBtn.addEventListener('click', () => {
+      parent.postMessage({ pluginMessage: { type: 'export-selection' } }, '*');
+    });
+
+    // Start connection
+    connect();
+  </script>
+</body>
+</html>

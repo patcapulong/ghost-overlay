@@ -1,0 +1,15 @@
+{
+  "name": "Ghost Overlay",
+  "id": "ghost-overlay-plugin",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["http://localhost:47777", "ws://localhost:47777"],
+    "reasoning": "Connects to the Ghost Overlay desktop app running locally"
+  }
+}
