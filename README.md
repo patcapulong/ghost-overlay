@@ -66,7 +66,7 @@ Or install from Figma Community: [Ghost Overlay Plugin](https://www.figma.com/co
 |--------|-----|
 | Move overlay | Drag the pill handle at top (hover to reveal) |
 | Adjust opacity | Use the slider at bottom (hover to reveal) |
-| Hide overlay | Click ✕ or press `Esc` |
+| Hide overlay | Click ✕ or `⌘⇧O` |
 | Show/hide | `⌘⇧O` |
 | Adjust opacity | `⌘[` / `⌘]` |
 

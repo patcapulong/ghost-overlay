@@ -179,11 +179,8 @@ function registerShortcuts() {
   globalShortcut.register('CmdOrCtrl+Shift+O', toggleOverlay);
   globalShortcut.register('CmdOrCtrl+[', () => adjustOpacity(-0.1));
   globalShortcut.register('CmdOrCtrl+]', () => adjustOpacity(0.1));
-  globalShortcut.register('Escape', () => {
-    if (overlayWindow && overlayWindow.isVisible()) {
-      overlayWindow.hide();
-    }
-  });
+  // Note: Removed global Escape shortcut as it interferes with other apps
+  // Users can hide overlay via ✕ button or ⌘⇧O
 }
 
 // IPC handlers
